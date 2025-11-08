@@ -1,0 +1,29 @@
+.idea/
+.vscode/
+.devcontainer/
+WORKSPACE
+.DS_Store
+
+# Editor temp files
+*~
+\#*#
+*.swp
+
+# Skip bazel dirs
+/bazel-*
+
+# skip bin dirs
+**/bin
+**/testbin
+
+# skip .out files (coverage tests)
+*.out
+
+# skip testdata go.sum, since it may have
+# different result depending on go version
+/testdata/**/go.sum
+/testdata/**legacy**
+
+## Skip testdata files that generate by tests using TestContext
+**/e2e/**
+**/e2e-*/**

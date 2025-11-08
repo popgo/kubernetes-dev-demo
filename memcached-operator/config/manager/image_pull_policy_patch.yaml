@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system # 确保命名空间匹配
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager # 容器名称必须匹配
+        imagePullPolicy: Never # <-- 关键配置
