@@ -37,6 +37,7 @@ import (
 
 	cachev1alpha1 "popgo.domain/memcached-operator/api/v1alpha1"
 	"popgo.domain/memcached-operator/internal/controller"
+	webhookv1alpha1 "popgo.domain/memcached-operator/internal/webhook/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -184,6 +185,13 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Memcached")
 		os.Exit(1)
+	}
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := webhookv1alpha1.SetupMemcachedWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Memcached")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 
