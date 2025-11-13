@@ -1,0 +1,6 @@
+apiVersion: cache.popgo.domain/v1alpha1
+kind: Memcached
+metadata:
+  name: forbidden-name
+spec:
+  size: 1

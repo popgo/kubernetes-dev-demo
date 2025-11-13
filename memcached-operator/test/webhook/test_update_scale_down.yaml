@@ -1,0 +1,6 @@
+apiVersion: cache.popgo.domain/v1alpha1
+kind: Memcached
+metadata:
+  name: update-scale-test
+spec:
+  size: 2

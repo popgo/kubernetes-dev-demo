@@ -1,0 +1,6 @@
+apiVersion: cache.popgo.domain/v1alpha1
+kind: Memcached
+metadata:
+  name: webhook-invalid-test
+spec:
+  size: 4

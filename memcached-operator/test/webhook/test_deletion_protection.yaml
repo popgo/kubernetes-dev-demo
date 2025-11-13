@@ -1,0 +1,8 @@
+apiVersion: cache.popgo.domain/v1alpha1
+kind: Memcached
+metadata:
+  name: protected-test
+  annotations:
+    popgo.domain/deletion-protection: "true"
+spec:
+  size: 1
