@@ -65,7 +65,43 @@ func (d *MemcachedCustomDefaulter) Default(_ context.Context, obj runtime.Object
 	}
 	memcachedlog.Info("Defaulting for Memcached", "name", memcached.GetName())
 
+	// case 1: set default value for spec.size
+	if memcached.Spec.Size == nil {
+		// Size *int32 string
+		defaultSize := int32(3)
+		memcached.Spec.Size = &defaultSize
+		memcachedlog.Info("Defaulted spec.size to 3", "name", memcached.GetName())
+	}
+
+	// case 2: set default value for metadata.annotations
+	if memcached.GetAnnotations() == nil {
+		memcached.SetAnnotations(make(map[string]string))
+	}
+	// make sure deployment-strategy exists alway
+	if _, ok := memcached.GetAnnotations()["cache.popgo.domain/deployment-strategy"]; !ok {
+		memcached.GetAnnotations()["cache.popgo.domain/deployment-strategy"] = "rolling-update"
+		memcachedlog.Info("Defaulted deployment-strategy annotation", "name", memcached.GetName())
+	}
+
 	// TODO(user): fill in your defaulting logic.
+
+	return nil
+}
+
+// validateMemcachedSpec contains shared validation logic for Create and Update
+func validateMemcachedSpec(memcached *cachev1alpha1.Memcached) error {
+	// validate that the value of Size is between 1 and 3
+	if memcached.Spec.Size == nil {
+		return fmt.Errorf("spec.size is required and must not be nil")
+	}
+
+	size := *memcached.Spec.Size
+	const minSize = 1
+	const maxSize = 3
+
+	if size < minSize || size > maxSize {
+		return fmt.Errorf("spec.size must be between %d and %d (inclusive), but got %d", minSize, maxSize, size)
+	}
 
 	return nil
 }
@@ -94,6 +130,16 @@ func (v *MemcachedCustomValidator) ValidateCreate(_ context.Context, obj runtime
 	}
 	memcachedlog.Info("Validation for Memcached upon creation", "name", memcached.GetName())
 
+	//
+	if err := validateMemcachedSpec(memcached); err != nil {
+		return nil, err
+	}
+
+	// 2. case A-1
+	if memcached.GetName() == "forbidden-name" {
+		return nil, fmt.Errorf("the Memcached name '%s' is explicitly forbidden by policy", memcached.GetName())
+	}
+
 	// TODO(user): fill in your validation logic upon object creation.
 
 	return nil, nil
@@ -101,11 +147,30 @@ func (v *MemcachedCustomValidator) ValidateCreate(_ context.Context, obj runtime
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type Memcached.
 func (v *MemcachedCustomValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	memcached, ok := newObj.(*cachev1alpha1.Memcached)
+	newMemcached, ok := newObj.(*cachev1alpha1.Memcached)
 	if !ok {
 		return nil, fmt.Errorf("expected a Memcached object for the newObj but got %T", newObj)
 	}
-	memcachedlog.Info("Validation for Memcached upon update", "name", memcached.GetName())
+	oldMemcached, ok := oldObj.(*cachev1alpha1.Memcached)
+	if !ok {
+		return nil, fmt.Errorf("expected a Memcached object for the oldObj but got %T", oldObj)
+	}
+
+	memcachedlog.Info("Validation for Memcached upon update", "name", newMemcached.GetName())
+
+	//
+	if err := validateMemcachedSpec(newMemcached); err != nil {
+		return nil, err
+	}
+
+	// 2. case B-1
+	if *newMemcached.Spec.Size < *oldMemcached.Spec.Size {
+		return nil, fmt.Errorf(
+			"scaling down Memcached is not allowed to prevent potential data loss. Attempted scale down from %d to %d",
+			*oldMemcached.Spec.Size,
+			*newMemcached.Spec.Size,
+		)
+	}
 
 	// TODO(user): fill in your validation logic upon object update.
 
@@ -119,6 +184,15 @@ func (v *MemcachedCustomValidator) ValidateDelete(ctx context.Context, obj runti
 		return nil, fmt.Errorf("expected a Memcached object but got %T", obj)
 	}
 	memcachedlog.Info("Validation for Memcached upon deletion", "name", memcached.GetName())
+
+	// case C-1
+	annotations := memcached.GetAnnotations()
+	if annotations != nil {
+		if val, exists := annotations["popgo.domain/deletion-protection"]; exists && val == "true" {
+			//
+			return nil, fmt.Errorf("deletion of Memcached %s is blocked by annotation 'popgo.domain/deletion-protection: true'. Please remove the annotation to proceed", memcached.GetName())
+		}
+	}
 
 	// TODO(user): fill in your validation logic upon object deletion.
 

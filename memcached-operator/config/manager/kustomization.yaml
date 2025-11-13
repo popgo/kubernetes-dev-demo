@@ -5,6 +5,6 @@ kind: Kustomization
 images:
 - name: controller
   newName: local-dev/memcached-operator
-  newTag: latest
+  newTag: v1alpha1-webhook-test
 patches:
 - path: image_pull_policy_patch.yaml
