@@ -1,0 +1,40 @@
+# argocd-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: memcached-operator-app
+  namespace: argocd 
+spec:
+  # Deployment project name (logical grouping in ArgoCD)
+  project: default
+  
+  source:
+    # Your Operator repository URL
+    repoURL: https://github.com/popgo/kubernetes-dev-demo.git 
+    # Monitor the latest commit on the main/master branch
+    targetRevision: HEAD 
+    # Path to the Operator Kustomize configuration
+    path: memcached-operator/config/default 
+    # Enable Kustomize rendering
+    directory:
+      jsonnet:
+        extVars: []
+      recurse: true
+      # Explicitly tell ArgoCD to use Kustomize 
+      # While ArgoCD detects kustomization.yaml by default, explicit indication is clearer
+      
+  destination:
+    # Target cluster (defaults to the cluster where ArgoCD is deployed)
+    server: https://kubernetes.default.svc 
+    # Target namespace for Operator deployment (consistent with your kubectl get all results)
+    namespace: memcached-operator-system
+    
+  syncPolicy:
+    automated:
+      # Allows automatic deletion of resources that don't exist in Git
+      prune: true 
+      # Automatically revert to the Git state if the cluster state is manually modified
+      selfHeal: true 
+    syncOptions:
+      # Ensure the target namespace exists
+      - CreateNamespace=true
